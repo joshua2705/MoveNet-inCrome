@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "MoveNet Tracker",
+  "version": "1.0",
+  "permissions": ["offscreen", "storage"],
+  "action": {
+    "default_popup": "index.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}
