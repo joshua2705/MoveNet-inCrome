@@ -5,15 +5,17 @@ let detector;
 const video = document.getElementById('offscreen-video');
 
 async function init() {
-  // Setup Background Camera (allowed after popup grant)
   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
   video.srcObject = stream;
 
-  // Load MoveNet
+  await new Promise((resolve) => {
+  video.onloadedmetadata = resolve;
+  });
+  await video.play();
+
   await tf.ready();
   detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet);
-  
-  
+
   startIntervalTask();
 }
 
@@ -30,6 +32,7 @@ async function detect() {
 function startIntervalTask() {
   setInterval(() => {
     // Conceptually capturing a frame (canvas.drawImage could be used here)
+    chrome.runtime.sendMessage({ type: 'ICON_TICK' });
     detect();
     console.log("Success: Background image frame captured at " + new Date().toLocaleTimeString());
   }, 5000);
