@@ -13,7 +13,7 @@ async function init() {
   await tf.ready();
   detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet);
   
-  
+  await setupEventListeners();
   startIntervalTask();
 }
 
@@ -24,6 +24,36 @@ async function detect() {
     chrome.runtime.sendMessage({ type: 'POSE_DATA', data: poses[0] });
   }
   requestAnimationFrame(detect);
+}
+
+async function setupEventListeners() {
+  // Remove 'async' from the listener declaration
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    
+    if (request.action === "getReferenceKeypoints") {
+      // Create an internal async IIFE or call an async function
+      (async () => {
+        try {
+          const calibratedPose = await detector.estimatePoses(video);
+          
+          const referenceKeypoints = {
+            timestamp: new Date().toISOString(),
+            status: "Active",
+            payload: calibratedPose[0].keypoints
+          };
+          
+          // Now sendResponse will work because 'return true' kept the channel open
+          sendResponse(referenceKeypoints);
+        } catch (error) {
+          console.error("Pose estimation failed:", error);
+          sendResponse({ status: "Error", error: error.message });
+        }
+      })();
+
+      // CRITICAL: Return true synchronously to keep the channel open
+      return true; 
+    }
+  });
 }
 
 // Requirement: Click pic every 5s and log "Success"
