@@ -42,12 +42,16 @@ function setupEventListeners() {
   btn.addEventListener('click', startMonitoring);
 
   // Listen for live posture check requests from background
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === 'POSE_DATA' && isTracking) {
-      console.log("Test variables: ", message.data.keypoints);
-      drawPose(message.data.keypoints);
-    }
-  });
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === 'POSE_DATA' && isTracking) {
+    console.log("Test variables: ", message.data.keypoints);
+    drawPose(message.data.keypoints);
+
+    const isValid = hasValidUpperBodyPose(message.data.keypoints);
+    updateIconFromPose(isValid);
+  }
+});
+
 }
 
 init();
@@ -116,7 +120,11 @@ function hasValidUpperBodyPose(keypoints) {
   console.log("Keypoints received:", keypoints);
 
   const requiredKeypoints = [0, 3, 4, 5, 6]; // nose, ears, shoulders
-  return requiredKeypoints.every(idx => keypoints[idx] !== null);
+  return requiredKeypoints.every(idx => keypoints[idx].score > 0.3);
+}
+
+function updateIconFromPose(isValid) {
+  chrome.runtime.sendMessage({ type: 'ICON_SET', valid: isValid });
 }
 
 // 4. Receive Pose Data from the Offscreen Document
