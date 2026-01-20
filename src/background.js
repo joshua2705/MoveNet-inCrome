@@ -7,6 +7,8 @@ async function setupOffscreen() {
     reasons: ['USER_MEDIA'],
     justification: 'MoveNet background tracking and 5s photo interval.'
   });
+  // Wait for the offscreen document to load
+  await new Promise(r => setTimeout(r, 1000));
 }
 
 chrome.runtime.onInstalled.addListener(setupOffscreen);
