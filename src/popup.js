@@ -9,10 +9,10 @@ let isCalibrated = false;
 let referenceKeypoints = null;
 
 async function init() {
-  
+
   statusText.textContent = 'Calibrate to start';
   btn.disabled = false;
-  
+
   // 1. Request camera immediately to grant permission to the extension origin
   navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
     video.srcObject = stream;
@@ -72,7 +72,7 @@ async function calibrate() {
 
     // Capture reference pose
     referenceKeypoints = await fetchReferenceKeypoints();
-    
+
     if (!hasValidUpperBodyPose(referenceKeypoints)) {
       throw new Error('Could not detect upper body. Please ensure your face and shoulders are visible.');
     }
@@ -112,11 +112,11 @@ async function fetchReferenceKeypoints() {
 }
 
 function hasValidUpperBodyPose(keypoints) {
-  
-    console.log("Keypoints received:", keypoints);
 
-    const requiredKeypoints = [0, 3, 4, 5, 6]; // nose, ears, shoulders
-    return requiredKeypoints.every(idx => keypoints[idx] !== null);
+  console.log("Keypoints received:", keypoints);
+
+  const requiredKeypoints = [0, 3, 4, 5, 6]; // nose, ears, shoulders
+  return requiredKeypoints.every(idx => keypoints[idx] !== null);
 }
 
 // 4. Receive Pose Data from the Offscreen Document
@@ -124,18 +124,18 @@ function hasValidUpperBodyPose(keypoints) {
 
 function drawPose(keypoints) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
+
   keypoints.forEach(kp => {
-    if (kp.score > 0.5) {
+    if (kp.score > 0.3) {
       // Calculate the mirrored X coordinate
       const mirroredX = canvas.width - kp.x;
 
       ctx.fillStyle = 'lime';
       ctx.beginPath();
-      
+
       // Use mirroredX instead of kp.x
       ctx.arc(mirroredX, kp.y, 4, 0, 2 * Math.PI);
-      
+
       ctx.fill();
     }
   });

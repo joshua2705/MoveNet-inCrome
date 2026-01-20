@@ -11,7 +11,14 @@ async function init() {
 
   // Load MoveNet
   await tf.ready();
-  detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet);
+  const detectorConfig = {
+  // 1. Switch to Thunder for higher accuracy
+  modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
+  // 2. Enable temporal smoothing for less jitter
+  enableSmoothing: true
+};
+
+  detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
   
   await setupEventListeners();
   startIntervalTask();
@@ -62,7 +69,7 @@ function startIntervalTask() {
     // Conceptually capturing a frame (canvas.drawImage could be used here)
     detect();
     console.log("Success: Background image frame captured at " + new Date().toLocaleTimeString());
-  }, 5000);
+  }, 1000);
 }
 
 init();
