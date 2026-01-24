@@ -70,7 +70,6 @@ async function setupEventListeners() {
 function startIntervalTask() {
   setInterval(() => {
     // Conceptually capturing a frame (canvas.drawImage could be used here)
-    chrome.runtime.sendMessage({ type: 'ICON_TICK' });
     detect();
     console.log("Success: Background image frame captured at " + new Date().toLocaleTimeString());
   }, 1000);
