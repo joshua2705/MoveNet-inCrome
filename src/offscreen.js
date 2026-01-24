@@ -1,4 +1,5 @@
-import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-webgl';
+import * as tf from '@tensorflow/tfjs-core';
 import * as poseDetection from '@tensorflow-models/pose-detection';
 
 import DeviationCalculator from './deviationCalulator.js';
@@ -24,7 +25,9 @@ async function init() {
   });
   await video.play();
 
+  await tf.setBackend('webgl');
   await tf.ready();
+  
   const detectorConfig = {
     modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
     enableSmoothing: true
