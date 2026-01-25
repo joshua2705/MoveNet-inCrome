@@ -1,35 +1,61 @@
-import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-webgl';
+import * as tf from '@tensorflow/tfjs-core';
 import * as poseDetection from '@tensorflow-models/pose-detection';
 
+import DeviationCalculator from './deviationCalulator.js';
+import PostureClassifier from './postureClassifier.js';
+
 let detector;
+let deviationCalc = null;
+let classifier = null;
+let referenceKeypoints = null;
+let liveKeypoints = null;
+let width = 0;
+let height = 0;
 const video = document.getElementById('offscreen-video');
 
 async function init() {
   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
   video.srcObject = stream;
-
+  // 1. First, set up the listener/promise to wait for metadata
   await new Promise((resolve) => {
-  video.onloadedmetadata = resolve;
+    video.onloadedmetadata = () => {
+      resolve();
+    };
   });
+
+  // 2. Now that the metadata is loaded, the dimensions are available
+  width = video.videoWidth;
+  height = video.videoHeight;
+
+  console.log("Video width: ", width);
+  console.log("Video height: ", height);
+  
   await video.play();
 
+  await tf.setBackend('webgl');
   await tf.ready();
+  
   const detectorConfig = {
-  // 1. Switch to Thunder for higher accuracy
-  modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
-  // 2. Enable temporal smoothing for less jitter
-  enableSmoothing: true
-};
+    modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
+    enableSmoothing: true
+  };
 
   detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
-  
+
   await setupEventListeners();
+  deviationCalc = new DeviationCalculator(width, height);
+  classifier = new PostureClassifier();
+  await classifier.loadModel();
+
   startIntervalTask();
+  startPoseMonitoring();
 }
 
 async function detect() {
   const poses = await detector.estimatePoses(video);
   if (poses.length > 0) {
+    liveKeypoints = poses[0].keypoints;
     // Broadcast data to the entire extension (like the popup)
     chrome.runtime.sendMessage({ type: 'POSE_DATA', data: poses[0] });
   }
@@ -39,21 +65,23 @@ async function detect() {
 async function setupEventListeners() {
   // Remove 'async' from the listener declaration
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    
+
     if (request.action === "getReferenceKeypoints") {
       // Create an internal async IIFE or call an async function
       (async () => {
         try {
           const calibratedPose = await detector.estimatePoses(video);
-          
-          const referenceKeypoints = {
+          referenceKeypoints = calibratedPose[0].keypoints;
+
+          // Create a response object
+          const referenceKeypointsObj = {
             timestamp: new Date().toISOString(),
             status: "Active",
-            payload: calibratedPose[0].keypoints
+            payload: referenceKeypoints
           };
-          
+
           // Now sendResponse will work because 'return true' kept the channel open
-          sendResponse(referenceKeypoints);
+          sendResponse(referenceKeypointsObj);
         } catch (error) {
           console.error("Pose estimation failed:", error);
           sendResponse({ status: "Error", error: error.message });
@@ -61,7 +89,7 @@ async function setupEventListeners() {
       })();
 
       // CRITICAL: Return true synchronously to keep the channel open
-      return true; 
+      return true;
     }
   });
 }
@@ -69,10 +97,17 @@ async function setupEventListeners() {
 // Requirement: Click pic every 5s and log "Success"
 function startIntervalTask() {
   setInterval(() => {
-    // Conceptually capturing a frame (canvas.drawImage could be used here)
     detect();
     console.log("Success: Background image frame captured at " + new Date().toLocaleTimeString());
   }, 1000);
+}
+
+async function startPoseMonitoring() {
+  setInterval(() => {
+    const deviation = deviationCalc.calculateDeviations(referenceKeypoints, liveKeypoints); // This can be null if the keypoints are invalid
+    const status = classifier.classify(deviation); // ["Good", "Bad", "Unknown"]
+    chrome.runtime.sendMessage({ type: 'ICON_SET', status: status });
+  }, 5000);
 }
 
 init();

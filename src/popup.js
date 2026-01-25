@@ -14,7 +14,7 @@ async function init() {
   btn.disabled = false;
 
   // 1. Request camera immediately to grant permission to the extension origin
-  navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+  await navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
     video.srcObject = stream;
     video.onloadedmetadata = () => {
       canvas.width = video.videoWidth;
@@ -46,16 +46,12 @@ chrome.runtime.onMessage.addListener((message) => {
   if (message.type === 'POSE_DATA' && isTracking) {
     console.log("Test variables: ", message.data.keypoints);
     drawPose(message.data.keypoints);
-
-    const isValid = hasValidUpperBodyPose(message.data.keypoints);
-    updateIconFromPose(isValid);
   }
 });
 
 }
 
 init();
-
 
 //Monitoring listener
 function startMonitoring() {
@@ -101,7 +97,7 @@ async function fetchReferenceKeypoints() {
   try {
     const response = await chrome.runtime.sendMessage({
       action: "getReferenceKeypoints",
-      //target: "offscreen"
+      target: "offscreen"
     });
 
     if (response) {
@@ -123,13 +119,8 @@ function hasValidUpperBodyPose(keypoints) {
   return requiredKeypoints.every(idx => keypoints[idx].score > 0.3);
 }
 
-function updateIconFromPose(isValid) {
-  chrome.runtime.sendMessage({ type: 'ICON_SET', valid: isValid });
-}
 
 // 4. Receive Pose Data from the Offscreen Document
-
-
 function drawPose(keypoints) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
