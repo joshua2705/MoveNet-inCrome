@@ -11,8 +11,8 @@ export default class DeviationCalculator {
     return keypoints.map(kp => {
         return {
             ...kp,
-            x: (kp.x / this.width) * 256,
-            y: (kp.y / this.height) * 256
+            x: (kp.x / this.width),
+            y: (kp.y / this.height)
         };
     });
 }
@@ -26,8 +26,12 @@ export default class DeviationCalculator {
       return null;
     }
 
+
     referenceKeypoints = this.getNormalizedKeypoints(referenceKeypoints);
     liveKeypoints = this.getNormalizedKeypoints(liveKeypoints);
+
+    console.log("referenceKeypoints: ", referenceKeypoints);
+    console.log("liveKeypoints: ", liveKeypoints);    
 
     // Feature 1: Head Forward Deviation
     deviations.headForward = this.calcHeadForwardDeviation(

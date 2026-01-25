@@ -17,12 +17,20 @@ const video = document.getElementById('offscreen-video');
 async function init() {
   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
   video.srcObject = stream;
+  // 1. First, set up the listener/promise to wait for metadata
+  await new Promise((resolve) => {
+    video.onloadedmetadata = () => {
+      resolve();
+    };
+  });
+
+  // 2. Now that the metadata is loaded, the dimensions are available
   width = video.videoWidth;
   height = video.videoHeight;
 
-  await new Promise((resolve) => {
-    video.onloadedmetadata = resolve;
-  });
+  console.log("Video width: ", width);
+  console.log("Video height: ", height);
+  
   await video.play();
 
   await tf.setBackend('webgl');

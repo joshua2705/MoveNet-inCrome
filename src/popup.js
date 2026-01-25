@@ -14,7 +14,7 @@ async function init() {
   btn.disabled = false;
 
   // 1. Request camera immediately to grant permission to the extension origin
-  navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+  await navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
     video.srcObject = stream;
     video.onloadedmetadata = () => {
       canvas.width = video.videoWidth;
