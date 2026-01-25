@@ -105,6 +105,7 @@ function startIntervalTask() {
 async function startPoseMonitoring() {
   setInterval(() => {
     const deviation = deviationCalc.calculateDeviations(referenceKeypoints, liveKeypoints); // This can be null if the keypoints are invalid
+    console.log('Calculated Deviation:', deviation);
     const status = classifier.classify(deviation); // ["Good", "Bad", "Unknown"]
     chrome.runtime.sendMessage({ type: 'ICON_SET', status: status });
   }, 5000);
