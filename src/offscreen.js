@@ -98,14 +98,17 @@ async function setupEventListeners() {
 function startIntervalTask() {
   setInterval(() => {
     detect();
-    console.log("Success: Background image frame captured at " + new Date().toLocaleTimeString());
+    //console.log("Success: Background image frame captured at " + new Date().toLocaleTimeString());
   }, 1000);
 }
 
 async function startPoseMonitoring() {
   setInterval(() => {
     const deviation = deviationCalc.calculateDeviations(referenceKeypoints, liveKeypoints); // This can be null if the keypoints are invalid
-    const status = classifier.classify(deviation); // ["Good", "Bad", "Unknown"]
+    const deviationArray = deviationCalc.getDeviationArray(deviation);
+    console.log("Deviation Array: ", deviationArray);
+    const status = classifier.classify(deviationArray); // ["Good", "Bad", "Unknown"]
+    console.log("Status: ", status);
     chrome.runtime.sendMessage({ type: 'ICON_SET', status: status });
   }, 5000);
 }

@@ -19,6 +19,11 @@
     }
   },
 
+  "web_accessible_resources": [{
+    "resources": ["model/*"],
+    "matches": ["<all_urls>"]
+  }],
+
   "icons": {
     "16": "icons/icon-green-16.png",
     "48": "icons/icon-green-48.png",
