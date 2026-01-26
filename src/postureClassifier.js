@@ -13,18 +13,27 @@ export default class PostureClassifier {
     this.model = model;
   }
 
-  
+
 
   classify(deviation) {
-    if (!deviation) return 'Unknown';
+    if (!deviation || !Array.isArray(deviation)) return 'Unknown';
     if (!this.model) return 'Unknown';
 
-    deviation = [0.1619578 , 0.38257828, 0.9598749 , 0.15382814, 0.8445233 , 0.02556589]
+    // 1. Change these when model is changed
+    const mins = [-0.12275609, -0.31493184, -47.666935, -0.06691397, -0.74889839, -0.013982756];
+    const maxs = [0.30752733, 0.49658066, 1.57376, 0.66545904, 0.05898637, 0.18418466];
+
+    // 2. Perform the MinMax Scaling: (x - min) / (max - min)
+    const scaledDeviation = deviation.map((val, i) => {
+      return (val - mins[i]) / (maxs[i] - mins[i]);
+    });
+
     return tfcore.tidy(() => {
-      const input = tfcore.tensor2d(deviation, [1, 6]);
+      const input = tfcore.tensor2d(scaledDeviation, [1, 6]);
       const prediction = this.model.predict(input);
-      console.log("prediction: ", prediction);
-      const score = prediction.dataSync()[0]; 
+      const score = prediction.dataSync()[0];
+      console.log("Scaled Input:", scaledDeviation);
+      console.log("Prediction Score:", score);
       return score > 0.5 ? 'Good' : 'Bad';
     });
   }
