@@ -26,7 +26,7 @@ async function init() {
   chrome.storage.local.get(['referenceKeypoints'], (result) => {
     if (result.referenceKeypoints) {
       referenceKeypoints = result.referenceKeypoints;
-      statusText.textContent = 'Monitoring. Wanna recalibrate?';
+      statusText.textContent = 'Reference loaded. Ready to monitor.';
     }
   });
 
@@ -75,6 +75,7 @@ function startMonitoring() {
 async function calibrate() {
   try {
     calibrateBtn.disabled = true;
+    btn.disabled = true;
     statusText.textContent = 'Calibrating... Sit in good posture!';
 
     // Wait 2 seconds for user to adjust
@@ -92,10 +93,12 @@ async function calibrate() {
 
     statusText.textContent = 'Calibration complete! Monitoring your posture';
     calibrateBtn.disabled = false;
+    btn.disabled = false;
 
   } catch (error) {
     statusText.textContent = `Error: ${error.message}`;
     calibrateBtn.disabled = false;
+    btn.disabled = false;
   }
 }
 
