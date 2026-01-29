@@ -50,6 +50,14 @@ export default class DeviationCalculator {
     this.height = height;
   }
 
+  setWidth(width) {
+    this.width = width;
+  }
+
+  setHeight(height) {
+    this.height = height;
+  }
+
   /**
      * Normalize keypoints from pixel coordinates to 0-1 range.
    * Converts from {x, y, score} objects to [y, x, confidence] arrays
