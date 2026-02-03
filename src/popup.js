@@ -5,13 +5,11 @@ const btn = document.getElementById('toggle-btn');
 const calibrateBtn = document.getElementById('calibrate-btn');
 const statusText = document.getElementById('status-text');
 let isTracking = false;
-let isCalibrated = false;
 let referenceKeypoints = null;
 
 async function init() {
 
-  statusText.textContent = 'Calibrate to start';
-  btn.disabled = false;
+  statusText.textContent = 'Start monitoring and Calibrate';
 
   // 1. Request camera immediately to grant permission to the extension origin
   await navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
@@ -23,11 +21,11 @@ async function init() {
   }).catch(error => { statusText.textContent = `Error: ${error.message}` });
 
 
+  calibrateBtn.disabled = true;
   // Load saved reference if exists
   chrome.storage.local.get(['referenceKeypoints'], (result) => {
     if (result.referenceKeypoints) {
       referenceKeypoints = result.referenceKeypoints;
-      btn.disabled = false;
       statusText.textContent = 'Reference loaded. Ready to monitor.';
     }
   });
@@ -42,12 +40,14 @@ function setupEventListeners() {
   btn.addEventListener('click', startMonitoring);
 
   // Listen for live posture check requests from background
-chrome.runtime.onMessage.addListener((message) => {
-  if (message.type === 'POSE_DATA' && isTracking) {
-    console.log("Test variables: ", message.data.keypoints);
-    drawPose(message.data.keypoints);
-  }
-});
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === 'POSE_DATA') {
+      isTracking = true;
+      btn.innerText = "Stop";
+      btn.style.backgroundColor = "#fd6359ff";
+      drawPose(message.data.keypoints);
+    }
+  });
 
 }
 
@@ -56,15 +56,26 @@ init();
 //Monitoring listener
 function startMonitoring() {
   isTracking = !isTracking;
-  btn.innerText = isTracking ? "Stop MoveNet" : "Start MoveNet";
-  btn.style.backgroundColor = isTracking ? "#fd6359ff" : "#74f578ff";
-  if (!isTracking) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (isTracking) {
+    calibrateBtn.disabled = false;
+    btn.innerText = "Stop";
+    btn.style.backgroundColor = "#fd6359ff";
+    chrome.runtime.sendMessage({ target: 'offscreen', action: 'START_CAMERA' });
+
+  } else {
+    calibrateBtn.disabled = true;
+    btn.innerText = "Start";
+    btn.style.backgroundColor = "#74f578ff";
+    chrome.runtime.sendMessage({ target: 'offscreen', action: 'STOP_CAMERA' });
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
 }
 
 // calibrate function
 async function calibrate() {
   try {
     calibrateBtn.disabled = true;
+    btn.disabled = true;
     statusText.textContent = 'Calibrating... Sit in good posture!';
 
     // Wait 2 seconds for user to adjust
@@ -80,15 +91,14 @@ async function calibrate() {
     // Save reference
     chrome.storage.local.set({ referenceKeypoints });
 
-    statusText.textContent = 'Calibration complete! You can now start monitoring.';
+    statusText.textContent = 'Calibration complete! Monitoring your posture';
     calibrateBtn.disabled = false;
-
-    // Notify background of recalibration
-    chrome.runtime.sendMessage({ action: 'recalibrate' });
+    btn.disabled = false;
 
   } catch (error) {
     statusText.textContent = `Error: ${error.message}`;
     calibrateBtn.disabled = false;
+    btn.disabled = false;
   }
 }
 

@@ -10,32 +10,15 @@ let deviationCalc = null;
 let classifier = null;
 let referenceKeypoints = null;
 let liveKeypoints = null;
-let width = 0;
-let height = 0;
+const width = 640;
+const height = 480;
+let stream = null;
 const video = document.getElementById('offscreen-video');
 
 async function init() {
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
-  // 1. First, set up the listener/promise to wait for metadata
-  await new Promise((resolve) => {
-    video.onloadedmetadata = () => {
-      resolve();
-    };
-  });
-
-  // 2. Now that the metadata is loaded, the dimensions are available
-  width = video.videoWidth;
-  height = video.videoHeight;
-
-  console.log("Video width: ", width);
-  console.log("Video height: ", height);
-  
-  await video.play();
-
   await tf.setBackend('webgl');
   await tf.ready();
-  
+
   const detectorConfig = {
     modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
     enableSmoothing: true
@@ -48,9 +31,44 @@ async function init() {
   classifier = new PostureClassifier();
   await classifier.loadModel();
 
+  cameraListener();
   startIntervalTask();
   startPoseMonitoring();
 }
+
+function cameraListener() {
+  chrome.runtime.onMessage.addListener(async (message) => {
+    if (message.target !== 'offscreen') return;
+
+    if (message.action === 'START_CAMERA') {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+
+      //Without this, the video dimensions are 0 and 0
+      await new Promise((resolve) => {
+        video.onloadedmetadata = () => {
+          resolve();
+        };
+      });
+
+      deviationCalc.setWidth(video.videoWidth);
+      deviationCalc.setHeight(video.videoHeight);
+
+      await video.play();
+    }
+
+    if (message.action === 'STOP_CAMERA') {
+      if (stream) {
+        const tracks = stream.getTracks();
+        tracks.forEach(track => track.stop());
+        stream = null;
+        video.srcObject = null;
+        console.log("Camera hardware released.");
+      }
+    }
+  });
+}
+
 
 async function detect() {
   const poses = await detector.estimatePoses(video);
@@ -94,16 +112,14 @@ async function setupEventListeners() {
   });
 }
 
-// Requirement: Click pic every 5s and log "Success"
+
 function startIntervalTask() {
-  setInterval(() => {
-    detect();
-    //console.log("Success: Background image frame captured at " + new Date().toLocaleTimeString());
-  }, 1000);
+  setInterval(() => { if(stream){detect();} }, 1000);
 }
 
 async function startPoseMonitoring() {
   setInterval(() => {
+    if(!stream){return;}
     const deviation = deviationCalc.calculateDeviations(referenceKeypoints, liveKeypoints); // This can be null if the keypoints are invalid
     const deviationArray = deviationCalc.getDeviationArray(deviation);
     console.log("Deviation Array: ", deviationArray);
